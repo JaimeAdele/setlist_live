@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CreateRoomForm from './components/CreateRoomForm';
 
 interface Room {
@@ -9,6 +9,12 @@ interface Room {
 
 function App() {
   const [rooms, setRooms] = useState<Room[]>([]);
+
+  useEffect(() => {
+    fetch('/api/events')
+      .then(res => res.json())
+      .then(data => setRooms(data.rooms));
+  }, []);
 
   function handleRoomCreated(room: Room) {
     setRooms(prev => [...prev, room]);

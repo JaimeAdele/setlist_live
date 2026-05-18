@@ -1,56 +1,63 @@
 import { Router } from 'express';
+import prisma from '../lib/prisma';
 
 const router = Router();
-
-// In-memory store - replaced with database in Phase 2
-interface Room {
-  id: string;
-  name: string;
-  roomCode: string;
-  createdAt: string;
-}
-
-const rooms: Room[] = [];
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-// GET /api/events/:id/setlist
-// Returns a hardcoded song list — no database yet (Phase 1)
-router.get('/:id/setlist', (req, res) => {
-  const songs = [
-    {
-      id: '1',
-      title: 'Levitating',
-      artist: 'Dua Lipa',
-      identifiedAt: new Date().toISOString(),
-    },
-  ];
-  res.json({ songs });
+// GET /api/events - list all rooms
+router.get('/', async (_req, res) => {
+  try {
+    const events = await prisma.event.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ rooms: events });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
 });
 
 // POST /api/events - create a new room
-router.post('/',(req,res) => {
+router.post('/', async (req, res) => {
   const { name } = req.body;
 
   if (!name || typeof name !== 'string') {
-    return res.status(400).json({ error: 'name is required' });
+    res.status(400).json({ error: 'name is required' });
+    return;
   }
 
-  const room: Room = {
-    id: Math.random().toString(36).substring(2),
-    name, roomCode: generateRoomCode(),
-    createdAt: new Date().toISOString()
-  };
-
-  rooms.push(room);
-  res.status(201).json(room);
+  try {
+    const event = await prisma.event.create({
+      data: {
+        name,
+        roomCode: generateRoomCode(),
+      },
+    });
+    res.status(201).json(event);
+  } catch {
+    res.status(500).json({ error: 'Failed to create event' });
+  }
 });
 
-// GET /api/events - list all rooms
-router.get('/', (_req, res) => {
-  res.json({ rooms });
+// GET /api/events/:id/setlist - returns songs for a room
+router.get('/:id/setlist', async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      include: { songs: true },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    res.json({ songs: event.songs });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch setlist' });
+  }
 });
 
 export default router;

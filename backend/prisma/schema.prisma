@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id        String      @id @default(uuid())
+  name      String
+  roomCode  String      @unique
+  status    EventStatus @default(DRAFT)
+  createdAt DateTime    @default(now())
+  songs     Song[]
+}
+
+model Song {
+  id           String   @id @default(uuid())
+  eventId      String
+  title        String
+  artist       String
+  identifiedAt DateTime @default(now())
+  event        Event    @relation(fields: [eventId], references: [id])
+}
+
+enum EventStatus {
+  DRAFT
+  LIVE
+  PAUSED
+  CLOSED
+}
