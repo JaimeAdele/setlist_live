@@ -74,9 +74,9 @@ router.get(
   '/google/callback',
   passport.authenticate('google', { session: false, failureRedirect: '/login' }),
   (req, res) => {
-    const user = req.user as { id: string; role: string };
+    const user = req.user!;
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      { userId: user.userId, role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );

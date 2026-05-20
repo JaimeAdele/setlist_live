@@ -29,7 +29,7 @@ passport.use(
           });
         }
 
-        return done(null, user);
+        return done(null, { userId: user.id, role: user.role });
       } catch (err) {
         return done(err as Error);
       }
