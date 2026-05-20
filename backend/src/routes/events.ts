@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { getIO } from '../lib/socket';
+import { requireAuth, requireAdmin, requirePrivileged } from '../middleware/auth';
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.get('/', async (_req, res) => {
 });
 
 // POST /api/events - create a new room
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
   const { name } = req.body;
 
   if (!name || typeof name !== 'string') {
@@ -62,7 +63,7 @@ router.get('/:id/setlist', async (req, res) => {
 });
 
 // POST /api/events/:id/songs - add a song and broadcast to the room
-router.post('/:id/songs', async (req, res) => {
+router.post('/:id/songs', requireAuth, requirePrivileged, async (req, res) => {
   const { title, artist } = req.body;
 
   if (!title || !artist) {

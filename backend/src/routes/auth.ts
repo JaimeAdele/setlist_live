@@ -1,0 +1,93 @@
+import { Router } from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import passport from '../lib/passport';
+import prisma from '../lib/prisma';
+
+const router = Router();
+
+const JWT_SECRET = process.env.JWT_SECRET!;
+
+// POST /api/auth/register - create an admin account
+router.post('/register', async (req, res) => {
+  const { email, password, name } = req.body;
+
+  if (!email || !password) {
+    res.status(400).json({ error: 'email and password are required' });
+    return;
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: { email, name, passwordHash, role: 'ADMIN' },
+    });
+    res.status(201).json({ id: user.id, email: user.email, role: user.role });
+  } catch {
+    res.status(409).json({ error: 'Email already in use' });
+  }
+});
+
+// POST /api/auth/login - log in and receive a JWT cookie
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.passwordHash) {
+    res.status(401).json({ error: 'Invalid credentials' });
+    return;
+  }
+
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+  if (!isValid) {
+    res.status(401).json({ error: 'Invalid credentials' });
+    return;
+  }
+
+  const token = jwt.sign(
+    { userId: user.id, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  res.json({ id: user.id, email: user.email, role: user.role });
+});
+
+// POST /api/auth/logout
+router.post('/logout', (_req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Logged out' });
+});
+
+// GET /api/auth/google - redirect to Google's login page
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+// GET /api/auth/google/callback - Google redirects here after login
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+  (req, res) => {
+    const user = req.user as { id: string; role: string };
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.redirect('http://localhost:5173');
+  }
+);
+
+export default router;

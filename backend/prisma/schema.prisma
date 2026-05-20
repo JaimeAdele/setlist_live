@@ -32,3 +32,19 @@ enum EventStatus {
   PAUSED
   CLOSED
 }
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?
+  googleId     String?  @unique
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now())
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  DJ
+}
