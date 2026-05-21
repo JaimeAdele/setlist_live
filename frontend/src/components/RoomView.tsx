@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRoomSocket } from '../hooks/useRoomSocket';
+import IdentifyButton from './IdentifyButton';
 
 interface Song {
   id: string;
@@ -51,6 +52,8 @@ function RoomView({ room, onBack }: Props) {
       <h2>
         {room.name} — {room.roomCode}
       </h2>
+
+      <IdentifyButton eventId={room.id} />
 
       <form onSubmit={handleAddSong}>
         <input
