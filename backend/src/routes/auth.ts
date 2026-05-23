@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import passport from '../lib/passport';
 import prisma from '../lib/prisma';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -58,6 +59,11 @@ router.post('/login', async (req, res) => {
   });
 
   res.json({ id: user.id, email: user.email, role: user.role });
+});
+
+// GET /api/auth/me - return current user's identity and role
+router.get('/me', requireAuth, (req, res) => {
+  res.json({ userId: req.user!.userId, role: req.user!.role });
 });
 
 // POST /api/auth/logout

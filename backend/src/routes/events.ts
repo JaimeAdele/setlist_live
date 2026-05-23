@@ -93,4 +93,28 @@ router.post('/:id/songs', requireAuth, requirePrivileged, async (req, res) => {
   }
 });
 
+// DELETE /api/events/:id - remove an event
+router.delete('/:id', requireAuth, requirePrivileged, async (req, res) => {
+  try {
+    await prisma.event.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
+// DELETE /api/events/:id/songs/:songId - remove a song from the setlist
+router.delete('/:id/songs/:songId', requireAuth, requirePrivileged, async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({ where: { id: req.params.id } });
+    if (!event) { res.status(404).json({ error: 'Event not found' }); return; }
+
+    await prisma.song.delete({ where: { id: req.params.songId } });
+    getIO().to(event.roomCode).emit('song:removed', { songId: req.params.songId });
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to remove song' });
+  }
+});
+
 export default router;

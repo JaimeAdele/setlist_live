@@ -22,6 +22,7 @@ function CreateRoomForm({ onRoomCreated }: CreateRoomFormProps) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
+      credentials: 'include',
     });
 
     const room = await res.json();

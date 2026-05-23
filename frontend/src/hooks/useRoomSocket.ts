@@ -12,7 +12,8 @@ interface Song {
 
 export function useRoomSocket(
   roomCode: string,
-  onSongAdded: (song: Song) => void
+  onSongAdded: (song: Song) => void,
+  onSongRemoved: (songId: string) => void
 ) {
   const [isIdentifying, setIsIdentifying] = useState(false);
 
@@ -20,6 +21,9 @@ export function useRoomSocket(
     socket.emit('join:room', roomCode);
 
     socket.on('song:added', onSongAdded);
+    socket.on('song:removed', ({ songId }: { songId: string }) => {
+      onSongRemoved(songId);
+    });
     let lockTimeout: ReturnType<typeof setTimeout>;
     socket.on('identify:start', () => {
       setIsIdentifying(true);
@@ -32,6 +36,7 @@ export function useRoomSocket(
 
     return () => {
       socket.off('song:added', onSongAdded);
+      socket.off('song:removed', onSongRemoved);
       socket.off('identify:start');
       socket.off('identify:end');
     };

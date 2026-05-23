@@ -20,9 +20,10 @@ interface Room {
 interface Props {
   room: Room;
   onBack: () => void;
+  isPrivileged: boolean;
 }
 
-function RoomView({ room, onBack }: Props) {
+function RoomView({ room, onBack, isPrivileged }: Props) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -35,9 +36,11 @@ function RoomView({ room, onBack }: Props) {
 
   const { isIdentifying } = useRoomSocket(room.roomCode, (song) => {
     setSongs((prev) => [song, ...prev]);
+  }, (songId) => {
+    setSongs((prev) => prev.filter((s) => s.id !== songId))
   });
 
-  function handleAddSong(e: React.FormEvent) {
+  function handleAddSong(e: React.SubmitEvent) {
     e.preventDefault();
     fetch(`/api/events/${room.id}/songs`, {
       method: 'POST',
@@ -46,6 +49,14 @@ function RoomView({ room, onBack }: Props) {
     });
     setTitle('');
     setArtist('');
+  }
+
+  function handleRemoveSong(songId: string) {
+    if (!window.confirm('Remove this song from the setlist?')) return;
+    fetch(`/api/events/${room.id}/songs/${songId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
   }
 
   return (
@@ -136,6 +147,17 @@ function RoomView({ room, onBack }: Props) {
                       <p className='text-center'>Open in</p>
                       <p className='text-center'>Spotify ↗</p>
                     </a>
+                  )}
+                  {isPrivileged && (
+                    <button
+                      onClick={() => handleRemoveSong(song.id)}
+                      className='p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors shrink-0 cursor-pointer'
+                      aria-label='Remove song'
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
                   )}
                 </li>
               ))}
