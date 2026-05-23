@@ -5,6 +5,8 @@ interface Song {
   id: string;
   title: string;
   artist: string;
+  albumArt: string | null;
+  spotifyId: string | null;
   identifiedAt: string;
 }
 

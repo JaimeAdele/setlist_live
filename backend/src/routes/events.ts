@@ -48,7 +48,7 @@ router.get('/:id/setlist', async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
       where: { id: req.params.id },
-      include: { songs: true },
+      include: { songs: { orderBy: { identifiedAt: 'desc' } } },
     });
 
     if (!event) {

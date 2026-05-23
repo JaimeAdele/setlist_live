@@ -67,20 +67,44 @@ function IdentifyButton({ eventId, roomLocked }: Props) {
     }
   }
 
-  const label: Record<IdentifyState, string> = {
-    idle: roomLocked ? 'Identifying...' : 'Identify Song',
-    listening: 'Listening...',
-    processing: 'Identifying...',
-    match: match ? `${match.title} — ${match.artist}` : 'Match found',
-    no_match: 'No match found',
-    error: 'Something went wrong',
+  const isActive = ACTIVE_STATES.includes(state) || roomLocked;
+
+  const config: Record<IdentifyState, { label: string; style: string }> = {
+    idle: {
+      label: roomLocked ? 'Identifying...' : 'Identify Song',
+      style: 'bg-accent hover:bg-accent-hover text-black',
+    },
+    listening: {
+      label: 'Listening...',
+      style: 'bg-accent text-black animate-pulse',
+    },
+    processing: {
+      label: 'Identifying...',
+      style: 'bg-gray-700 text-white',
+    },
+    match: {
+      label: match ? `${match.title} — ${match.artist}` : 'Match found',
+      style: 'bg-gray-800 text-accent',
+    },
+    no_match: {
+      label: 'No match found',
+      style: 'bg-gray-800 text-gray-400',
+    },
+    error: {
+      label: 'Something went wrong',
+      style: 'bg-gray-800 text-red-400',
+    },
   };
 
-  const disabled = ACTIVE_STATES.includes(state) || roomLocked;
+  const { label, style } = config[state];
 
   return (
-    <button onClick={handleClick} disabled={disabled}>
-      {label[state]}
+    <button
+      onClick={handleClick}
+      disabled={isActive}
+      className={`w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all disabled:cursor-not-allowed ${style}`}
+    >
+      {label}
     </button>
   );
 }
