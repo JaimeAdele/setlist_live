@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
+import { EventStatus } from '../generated/prisma/client';
 import { getIO } from '../lib/socket';
 import { requireAuth, requireAdmin, requirePrivileged } from '../middleware/auth';
 
@@ -86,7 +87,7 @@ router.post('/:id/songs', requireAuth, requirePrivileged, async (req, res) => {
       return;
     }
 
-    if (event.status !== 'ACTIVE') {
+    if (event.status !== EventStatus.ACTIVE) {
       res.status(403).json({ error: 'Event is not active' });
       return;
     }
