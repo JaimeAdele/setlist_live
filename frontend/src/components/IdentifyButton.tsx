@@ -15,23 +15,37 @@ interface Props {
   eventActive: boolean;
 }
 
-const ACTIVE_STATES: IdentifyState[] = ['listening', 'processing'];
-
 function IdentifyButton({ eventId, roomLocked, eventActive }: Props) {
   const [state, setState] = useState<IdentifyState>('idle');
   const [match, setMatch] = useState<Song | null>(null);
-  const { capture } = useAudioCapture();
+  const { capture, cancel } = useAudioCapture();
+
+  async function handleCancel() {
+    cancel();
+    setState('idle');
+    // Release the lock so others can identify — best-effort, don't block UI
+    await fetch(`/api/events/${eventId}/identify/lock`, {
+      method: 'DELETE',
+      credentials: 'include',
+    }).catch(() => {});
+  }
 
   async function handleClick() {
-    if (ACTIVE_STATES.includes(state) || roomLocked) return;
+    // Tapping during listening cancels the recording
+    if (state === 'listening') {
+      await handleCancel();
+      return;
+    }
+
+    if (state === 'processing' || roomLocked) return;
 
     try {
-      const reserveRes = await fetch(`/api/events/${eventId}/identify/reserve`, {
+      const lockRes = await fetch(`/api/events/${eventId}/identify/lock`, {
         method: 'POST',
         credentials: 'include',
       });
 
-      if (!reserveRes.ok) {
+      if (!lockRes.ok) {
         setState('error');
         setTimeout(() => setState('idle'), 3000);
         return;
@@ -62,13 +76,18 @@ function IdentifyButton({ eventId, roomLocked, eventActive }: Props) {
         setState('error');
         setTimeout(() => setState('idle'), 3000);
       }
-    } catch {
-      setState('error');
-      setTimeout(() => setState('idle'), 3000);
+    } catch (err) {
+      // AbortError means the user cancelled — just go back to idle
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setState('idle');
+      } else {
+        setState('error');
+        setTimeout(() => setState('idle'), 3000);
+      }
     }
   }
 
-  const isActive = ACTIVE_STATES.includes(state) || roomLocked || !eventActive;
+  const isActive = state === 'processing' || !eventActive || (roomLocked && state !== 'listening');
 
   const config: Record<IdentifyState, { label: string; style: string }> = {
     idle: {
@@ -76,7 +95,7 @@ function IdentifyButton({ eventId, roomLocked, eventActive }: Props) {
       style: !eventActive ? 'bg-gray-800 text-gray-500' : 'bg-accent hover:bg-accent-hover text-black',
     },
     listening: {
-      label: 'Listening...',
+      label: 'Listening... tap to cancel',
       style: 'bg-accent text-black animate-pulse',
     },
     processing: {

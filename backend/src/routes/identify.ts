@@ -5,13 +5,12 @@ import redis from '../lib/redis';
 import { getIO } from '../lib/socket';
 import { identifyAudio } from '../services/acr';
 import { searchTrack } from '../services/spotify';
-import { requireAuth } from '../middleware/auth';
 
 const router = Router({ mergeParams: true });
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Step 1 — called before recording starts; acquires the lock
-router.post('/reserve', requireAuth, async (req, res) => {
+// POST /lock — acquires the identification lock and notifies the room
+router.post('/lock', async (req, res) => {
   const { id: eventId } = req.params;
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
@@ -32,8 +31,24 @@ router.post('/reserve', requireAuth, async (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-// Step 2 — called after recording finishes; processes the audio
-router.post('/', requireAuth, upload.single('audio'), async (req, res) => {
+// DELETE /lock — releases the lock when the user cancels
+router.delete('/lock', async (req, res) => {
+  const { id: eventId } = req.params;
+
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    res.status(404).json({ error: 'Event not found' });
+    return;
+  }
+
+  const lockKey = `identify:lock:${eventId}`;
+  await redis.del(lockKey);
+  getIO().to(event.roomCode).emit('identify:end');
+  res.status(200).json({ ok: true });
+});
+
+// POST / — receives the recorded audio and runs identification
+router.post('/', upload.single('audio'), async (req, res) => {
   const { id: eventId } = req.params;
 
   if (!req.file) {
