@@ -14,8 +14,24 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(passport.initialize());
 
-// Allow requests from the frontend dev server
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+// Allow requests from the frontend dev server and ngrok tunnels (for mobile testing)
+const allowedOrigins = [
+  'http://localhost:5173',
+  /https:\/\/.*\.ngrok-free\.app$/,  // ngrok free tier domains
+  /https:\/\/.*\.ngrok\.io$/,        // ngrok paid/legacy domains
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. curl, Postman, same-origin server-to-server)
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigins.some(
+      (pattern) => typeof pattern === 'string' ? pattern === origin : pattern.test(origin)
+    );
+    callback(allowed ? null : new Error(`CORS: origin ${origin} not allowed`), allowed);
+  },
+  credentials: true,
+}));
 
 // Health check — used to verify the server is running
 app.get('/api/health', (_req, res) => {
