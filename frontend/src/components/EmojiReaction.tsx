@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const EMOJIS = ['🔥', '❤️', '🥱', '🤮'] as const;
 const VOTING_WINDOW_MS = 15 * 60 * 1000;
@@ -11,6 +11,18 @@ interface Props {
 
 function EmojiReaction({ songId, identifiedAt, breakdown }: Props) {
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [showNotice, setShowNotice] = useState(false);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (noticeTimer.current) clearTimeout(noticeTimer.current); };
+  }, []);
+
+  function handleClosedClick() {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    setShowNotice(true);
+    noticeTimer.current = setTimeout(() => setShowNotice(false), 2000);
+  }
   const [windowOpen, setWindowOpen] = useState(
     () => Date.now() - new Date(identifiedAt).getTime() < VOTING_WINDOW_MS
   );
@@ -36,14 +48,24 @@ function EmojiReaction({ songId, identifiedAt, breakdown }: Props) {
 
   if (!windowOpen) {
     return (
-      <div className='flex items-center gap-2 rounded-full bg-gray-800 border border-gray-700 px-3 py-0.5'>
-        {EMOJIS.map((emoji, i) => (
-          <span key={emoji} className='flex items-center gap-1 text-sm text-gray-500'>
-            {i > 0 && <span className='text-gray-700'>·</span>}
-            <span>{emoji}</span>
-            <span className='text-xs'>{breakdown[emoji] ?? 0}</span>
-          </span>
-        ))}
+      <div className='relative'>
+        {showNotice && (
+          <div className='absolute -top-7 left-0 bg-gray-700 text-gray-300 text-xs px-2.5 py-1 rounded-full whitespace-nowrap'>
+            Voting closed for this song
+          </div>
+        )}
+        <div
+          onClick={handleClosedClick}
+          className='flex items-center gap-2 rounded-full bg-gray-800 border border-gray-700 px-3 py-0.5 cursor-pointer'
+        >
+          {EMOJIS.map((emoji, i) => (
+            <span key={emoji} className='flex items-center gap-1 text-sm text-gray-500'>
+              {i > 0 && <span className='text-gray-700'>·</span>}
+              <span>{emoji}</span>
+              <span className='text-xs'>{breakdown[emoji] ?? 0}</span>
+            </span>
+          ))}
+        </div>
       </div>
     );
   }
