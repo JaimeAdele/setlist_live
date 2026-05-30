@@ -35,27 +35,24 @@ function EmojiReaction({ songId, identifiedAt, breakdown }: Props) {
   }
 
   return (
-    <div className='flex items-center gap-1 mt-2'>
+    <div className='flex items-center gap-1.5'>
       {EMOJIS.map((emoji) => (
         <button
           key={emoji}
           onClick={() => handleReact(emoji)}
           disabled={!windowOpen}
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all select-none ${
-            windowOpen
-              ? selectedEmoji === emoji
-                ? 'bg-gray-700 ring-1 ring-gray-500 scale-110 cursor-pointer'
-                : 'hover:bg-gray-800 cursor-pointer'
-              : 'opacity-50 cursor-default'
+          className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-sm transition-all select-none ${
+            !windowOpen
+              ? 'border-gray-700 bg-gray-800 text-gray-500 cursor-default'
+              : selectedEmoji === emoji
+              ? 'border-gray-500 bg-gray-700 ring-1 ring-gray-500 scale-110 cursor-pointer'
+              : 'border-gray-700 bg-gray-800 hover:border-gray-600 hover:bg-gray-700 cursor-pointer'
           }`}
         >
-          <span className='text-base'>{emoji}</span>
+          <span>{emoji}</span>
           <span className='text-xs text-gray-400'>{breakdown[emoji] ?? 0}</span>
         </button>
       ))}
-      {!windowOpen && (
-        <span className='ml-1 text-xs text-gray-600'>· closed</span>
-      )}
     </div>
   );
 }

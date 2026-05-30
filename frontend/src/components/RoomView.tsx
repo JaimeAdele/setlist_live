@@ -428,11 +428,11 @@ function RoomView({ room, onBack, isPrivileged, onRoomUpdate }: Props) {
               No songs identified yet
             </p>
           ) : (
-            <ul className='flex flex-col gap-3'>
+            <ul className='flex flex-col gap-7'>
               {songs.map((song) => (
                 <li
                   key={song.id}
-                  className='flex items-center gap-4 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3'
+                  className='relative flex items-center gap-4 bg-gray-900 border border-gray-800 rounded-xl px-4 pt-3 pb-6'
                 >
                   {song.albumArt ? (
                     <img
@@ -450,6 +450,8 @@ function RoomView({ room, onBack, isPrivileged, onRoomUpdate }: Props) {
                     <p className='text-gray-400 text-sm truncate'>
                       {song.artist}
                     </p>
+                  </div>
+                  <div className='absolute -bottom-3.5 left-4 z-10'>
                     <EmojiReaction
                       songId={song.id}
                       identifiedAt={song.identifiedAt}
