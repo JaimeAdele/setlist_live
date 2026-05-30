@@ -11,6 +11,8 @@ interface SpotifySearchResult {
   previewUrl: string | null;
 }
 
+const EMPTY_BREAKDOWN = { '🔥': 0, '❤️': 0, '🥱': 0, '🤮': 0 };
+
 interface Song {
   id: string;
   title: string;
@@ -20,6 +22,7 @@ interface Song {
   identifiedAt: string;
   vibeScore: number;
   reactionCount: number;
+  breakdown: Record<string, number>;
 }
 
 interface VenueSummary {
@@ -85,15 +88,15 @@ function RoomView({ room, onBack, isPrivileged, onRoomUpdate }: Props) {
   }, [room.id]);
 
   const { isIdentifying } = useRoomSocket(room.roomCode, (song) => {
-    setSongs((prev) => [song, ...prev]);
+    setSongs((prev) => [{ ...song, breakdown: EMPTY_BREAKDOWN }, ...prev]);
   }, (songId) => {
     setSongs((prev) => prev.filter((s) => s.id !== songId));
   }, (newStatus) => {
     setStatus(newStatus as Room['status']);
     onRoomUpdate(room.id, { status: newStatus as Room['status'] });
-  }, ({ songId, vibeScore, reactionCount }) => {
+  }, ({ songId, vibeScore, reactionCount, breakdown }) => {
     setSongs((prev) =>
-      prev.map((s) => s.id === songId ? { ...s, vibeScore, reactionCount } : s)
+      prev.map((s) => s.id === songId ? { ...s, vibeScore, reactionCount, breakdown } : s)
     );
   });
 
@@ -450,8 +453,7 @@ function RoomView({ room, onBack, isPrivileged, onRoomUpdate }: Props) {
                     <EmojiReaction
                       songId={song.id}
                       identifiedAt={song.identifiedAt}
-                      vibeScore={song.vibeScore}
-                      reactionCount={song.reactionCount}
+                      breakdown={song.breakdown}
                     />
                   </div>
                   {song.spotifyId && (

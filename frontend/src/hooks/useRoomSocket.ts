@@ -10,12 +10,14 @@ interface Song {
   identifiedAt: string;
   vibeScore: number;
   reactionCount: number;
+  breakdown: Record<string, number>;
 }
 
 interface ReactionUpdate {
   songId: string;
   vibeScore: number;
   reactionCount: number;
+  breakdown: Record<string, number>;
 }
 
 export function useRoomSocket(

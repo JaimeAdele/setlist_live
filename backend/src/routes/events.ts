@@ -57,7 +57,12 @@ router.get('/:id/setlist', async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
       where: { id: req.params.id },
-      include: { songs: { orderBy: { identifiedAt: 'desc' } } },
+      include: {
+        songs: {
+          orderBy: { identifiedAt: 'desc' },
+          include: { reactions: { select: { emoji: true } } },
+        },
+      },
     });
 
     if (!event) {
@@ -65,7 +70,15 @@ router.get('/:id/setlist', async (req, res) => {
       return;
     }
 
-    res.json({ songs: event.songs });
+    const songs = event.songs.map(({ reactions, ...song }) => {
+      const breakdown: Record<string, number> = { '🔥': 0, '❤️': 0, '🥱': 0, '🤮': 0 };
+      for (const r of reactions) {
+        if (r.emoji in breakdown) breakdown[r.emoji]++;
+      }
+      return { ...song, breakdown };
+    });
+
+    res.json({ songs });
   } catch {
     res.status(500).json({ error: 'Failed to fetch setlist' });
   }
