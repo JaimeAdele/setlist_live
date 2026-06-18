@@ -18,6 +18,7 @@ A real-time, multi-tenant DJ set song identification platform. Each Organizer (D
 - 🚪 **Single and multi-room events** — organizers choose at creation time: single-room events drop attendees directly into the room; multi-room events show inline room buttons so attendees pick their room without a separate page
 - ✏️ **Room management** — organizers can rename rooms and add new rooms to an existing event from the organizer dashboard
 - 🔁 **Recurring events** — organizers can mark an event as repeating (weekly, biweekly, or monthly); a "Schedule next" button auto-fills the next occurrence date, name, venue, and room names into the create form
+- 👥 **Organizer teams** — organizers can add teammates by email; teammates can manage all events and rooms on the organizer's behalf, but only the organizer can manage team membership
 
 ---
 
@@ -176,8 +177,11 @@ All routes are prefixed with `/api`.
 | `GET` | `/users/lookup?email=...` | Admin | Find a USER-role account by email |
 | `PATCH` | `/users/:id/promote` | Admin | Promote a user to Organizer and assign their slug |
 | `GET` | `/organizers` | — | List all organizers with active event counts |
-| `GET` | `/organizers/:slug` | — | Organizer profile + events + rooms |
+| `GET` | `/organizers/:slug` | — | Organizer profile + events + rooms + `viewerIsTeamMember` flag |
 | `PATCH` | `/organizers/:id` | Admin | Edit organizer name or slug |
+| `GET` | `/organizers/me/team` | Organizer | List teammates |
+| `POST` | `/organizers/me/team` | Organizer | Add a teammate by email |
+| `DELETE` | `/organizers/me/team/:userId` | Organizer | Remove a teammate |
 | `POST` | `/events` | Organizer | Create an event |
 | `PATCH` | `/events/:id/startTime` | Organizer/Admin | Update event start time |
 | `PATCH` | `/events/:id/venue` | Organizer/Admin | Assign or clear the event venue |

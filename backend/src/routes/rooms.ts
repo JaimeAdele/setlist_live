@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { optionalAuth } from '../middleware/auth';
+import { canManageEvent } from '../lib/eventAuth';
 
 const router = Router();
 
@@ -35,11 +36,9 @@ router.get('/:roomCode/setlist', optionalAuth, async (req: Request, res: Respons
     }
 
     const userId = req.user?.userId;
-    const isPrivileged = !!(userId && (
-      req.user?.role === 'ADMIN' ||
-      room.event.organizerId === userId ||
-      room.djs.some(dj => dj.userId === userId)
-    ));
+    const isPrivileged =
+      (await canManageEvent(req.user, room.event.organizerId)) ||
+      !!(userId && room.djs.some(dj => dj.userId === userId));
 
     const songs = room.songs.map(({ reactions, ...song }) => {
       const breakdown: Record<string, number> = { '🔥': 0, '❤️': 0, '🥱': 0, '🤮': 0 };

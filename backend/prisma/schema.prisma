@@ -9,17 +9,29 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  name          String?
-  slug          String?  @unique
-  passwordHash  String?
-  googleId      String?  @unique
-  role          UserRole @default(USER)
-  createdAt     DateTime @default(now())
-  events        Event[]  @relation("OrganizerEvents")
-  createdVenues Venue[]  @relation("VenueCreator")
-  djAssignments RoomDJ[]
+  id              String            @id @default(uuid())
+  email           String            @unique
+  name            String?
+  slug            String?           @unique
+  passwordHash    String?
+  googleId        String?           @unique
+  role            UserRole          @default(USER)
+  createdAt       DateTime          @default(now())
+  events          Event[]           @relation("OrganizerEvents")
+  createdVenues   Venue[]           @relation("VenueCreator")
+  djAssignments   RoomDJ[]
+  teamMemberships OrganizerMember[] @relation("OrganizerTeam")
+  teamMembers     OrganizerMember[] @relation("OrganizerTeamFor")
+}
+
+model OrganizerMember {
+  userId      String
+  organizerId String
+  user        User     @relation("OrganizerTeam",    fields: [userId],      references: [id], onDelete: Cascade)
+  organizer   User     @relation("OrganizerTeamFor", fields: [organizerId], references: [id], onDelete: Cascade)
+  addedAt     DateTime @default(now())
+
+  @@unique([userId, organizerId])
 }
 
 enum UserRole {

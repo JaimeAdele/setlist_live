@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { getIO } from '../lib/socket';
-import { requireAuth, requireOrganizer, requirePrivileged } from '../middleware/auth';
+import { requireAuth, requireOrganizer } from '../middleware/auth';
+import { canManageEvent } from '../lib/eventAuth';
 
 const router = Router();
 
@@ -67,7 +68,7 @@ router.post('/', requireAuth, requireOrganizer, async (req: Request, res: Respon
 });
 
 // PATCH /api/events/:id/startTime
-router.patch('/:id/startTime', requireAuth, requirePrivileged, async (req: Request, res: Response) => {
+router.patch('/:id/startTime', requireAuth, async (req: Request, res: Response) => {
   const { startTime } = req.body;
   if (!startTime) {
     res.status(400).json({ error: 'startTime is required' });
@@ -77,7 +78,7 @@ router.patch('/:id/startTime', requireAuth, requirePrivileged, async (req: Reque
   try {
     const event = await prisma.event.findUnique({ where: { id: req.params.id } });
     if (!event) { res.status(404).json({ error: 'Event not found' }); return; }
-    if (req.user!.role !== 'ADMIN' && event.organizerId !== req.user!.userId) {
+    if (!(await canManageEvent(req.user, event.organizerId))) {
       res.status(403).json({ error: 'Not authorized' }); return;
     }
 
@@ -92,7 +93,7 @@ router.patch('/:id/startTime', requireAuth, requirePrivileged, async (req: Reque
 });
 
 // PATCH /api/events/:id/venue
-router.patch('/:id/venue', requireAuth, requirePrivileged, async (req: Request, res: Response) => {
+router.patch('/:id/venue', requireAuth, async (req: Request, res: Response) => {
   const { venueId } = req.body;
 
   if (venueId !== null && venueId !== undefined && typeof venueId !== 'string') {
@@ -103,7 +104,7 @@ router.patch('/:id/venue', requireAuth, requirePrivileged, async (req: Request, 
   try {
     const event = await prisma.event.findUnique({ where: { id: req.params.id } });
     if (!event) { res.status(404).json({ error: 'Event not found' }); return; }
-    if (req.user!.role !== 'ADMIN' && event.organizerId !== req.user!.userId) {
+    if (!(await canManageEvent(req.user, event.organizerId))) {
       res.status(403).json({ error: 'Not authorized' }); return;
     }
 
@@ -119,11 +120,11 @@ router.patch('/:id/venue', requireAuth, requirePrivileged, async (req: Request, 
 });
 
 // DELETE /api/events/:id
-router.delete('/:id', requireAuth, requirePrivileged, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const event = await prisma.event.findUnique({ where: { id: req.params.id } });
     if (!event) { res.status(404).json({ error: 'Event not found' }); return; }
-    if (req.user!.role !== 'ADMIN' && event.organizerId !== req.user!.userId) {
+    if (!(await canManageEvent(req.user, event.organizerId))) {
       res.status(403).json({ error: 'Not authorized' }); return;
     }
 
@@ -135,7 +136,7 @@ router.delete('/:id', requireAuth, requirePrivileged, async (req: Request, res: 
 });
 
 // POST /api/events/:id/rooms — create a room within an event
-router.post('/:id/rooms', requireAuth, requirePrivileged, async (req: Request, res: Response) => {
+router.post('/:id/rooms', requireAuth, async (req: Request, res: Response) => {
   const { name } = req.body;
 
   if (!name || typeof name !== 'string') {
@@ -146,7 +147,7 @@ router.post('/:id/rooms', requireAuth, requirePrivileged, async (req: Request, r
   try {
     const event = await prisma.event.findUnique({ where: { id: req.params.id } });
     if (!event) { res.status(404).json({ error: 'Event not found' }); return; }
-    if (req.user!.role !== 'ADMIN' && event.organizerId !== req.user!.userId) {
+    if (!(await canManageEvent(req.user, event.organizerId))) {
       res.status(403).json({ error: 'Not authorized' }); return;
     }
 
@@ -160,7 +161,7 @@ router.post('/:id/rooms', requireAuth, requirePrivileged, async (req: Request, r
 });
 
 // PATCH /api/events/:id/rooms/:roomId/status
-router.patch('/:id/rooms/:roomId/status', requireAuth, requirePrivileged, async (req: Request, res: Response) => {
+router.patch('/:id/rooms/:roomId/status', requireAuth, async (req: Request, res: Response) => {
   const { status } = req.body;
 
   if (!['UPCOMING', 'ACTIVE', 'CLOSED'].includes(status)) {
@@ -176,7 +177,7 @@ router.patch('/:id/rooms/:roomId/status', requireAuth, requirePrivileged, async 
     if (!room || room.eventId !== req.params.id) {
       res.status(404).json({ error: 'Room not found' }); return;
     }
-    if (req.user!.role !== 'ADMIN' && room.event.organizerId !== req.user!.userId) {
+    if (!(await canManageEvent(req.user, room.event.organizerId))) {
       res.status(403).json({ error: 'Not authorized' }); return;
     }
 
@@ -192,7 +193,7 @@ router.patch('/:id/rooms/:roomId/status', requireAuth, requirePrivileged, async 
 });
 
 // PATCH /api/events/:id/rooms/:roomId — rename a room
-router.patch('/:id/rooms/:roomId', requireAuth, requirePrivileged, async (req: Request, res: Response) => {
+router.patch('/:id/rooms/:roomId', requireAuth, async (req: Request, res: Response) => {
   const { name } = req.body;
   if (!name || typeof name !== 'string' || !name.trim()) {
     res.status(400).json({ error: 'name is required' });
@@ -207,7 +208,7 @@ router.patch('/:id/rooms/:roomId', requireAuth, requirePrivileged, async (req: R
     if (!room || room.eventId !== req.params.id) {
       res.status(404).json({ error: 'Room not found' }); return;
     }
-    if (req.user!.role !== 'ADMIN' && room.event.organizerId !== req.user!.userId) {
+    if (!(await canManageEvent(req.user, room.event.organizerId))) {
       res.status(403).json({ error: 'Not authorized' }); return;
     }
 
@@ -222,7 +223,7 @@ router.patch('/:id/rooms/:roomId', requireAuth, requirePrivileged, async (req: R
 });
 
 // DELETE /api/events/:id/rooms/:roomId
-router.delete('/:id/rooms/:roomId', requireAuth, requirePrivileged, async (req: Request, res: Response) => {
+router.delete('/:id/rooms/:roomId', requireAuth, async (req: Request, res: Response) => {
   try {
     const room = await prisma.room.findUnique({
       where: { id: req.params.roomId },
@@ -231,7 +232,7 @@ router.delete('/:id/rooms/:roomId', requireAuth, requirePrivileged, async (req: 
     if (!room || room.eventId !== req.params.id) {
       res.status(404).json({ error: 'Room not found' }); return;
     }
-    if (req.user!.role !== 'ADMIN' && room.event.organizerId !== req.user!.userId) {
+    if (!(await canManageEvent(req.user, room.event.organizerId))) {
       res.status(403).json({ error: 'Not authorized' }); return;
     }
 
@@ -264,10 +265,8 @@ router.post('/:id/rooms/:roomId/songs', requireAuth, async (req: Request, res: R
     }
 
     const userId = req.user!.userId;
-    const userRole = req.user!.role;
     const canAdd =
-      userRole === 'ADMIN' ||
-      room.event.organizerId === userId ||
+      (await canManageEvent(req.user, room.event.organizerId)) ||
       room.djs.some(dj => dj.userId === userId);
 
     if (!canAdd) { res.status(403).json({ error: 'Not authorized' }); return; }
@@ -308,10 +307,8 @@ router.delete('/:id/rooms/:roomId/songs/:songId', requireAuth, async (req: Reque
     }
 
     const userId = req.user!.userId;
-    const userRole = req.user!.role;
     const canDelete =
-      userRole === 'ADMIN' ||
-      room.event.organizerId === userId ||
+      (await canManageEvent(req.user, room.event.organizerId)) ||
       room.djs.some(dj => dj.userId === userId);
 
     if (!canDelete) { res.status(403).json({ error: 'Not authorized' }); return; }
