@@ -208,6 +208,31 @@ All routes are prefixed with `/api`.
 
 ---
 
+## Running tests
+
+The backend has an integration test suite (Vitest + Supertest) that runs against a dedicated test database. Tests cover auth, event/room management, reactions, and organizer team management.
+
+### One-time setup
+
+Create the test database and apply migrations:
+
+```bash
+docker exec vibe-check-postgres-1 createdb -U postgres vibecheck_test
+cd backend
+DATABASE_URL=postgresql://postgres:password@localhost:5432/vibecheck_test npx prisma migrate deploy
+```
+
+### Running tests
+
+```bash
+npm test --prefix backend          # run all tests once
+npm run test:watch --prefix backend  # re-run on file save (while writing tests)
+```
+
+Tests run sequentially (not in parallel) to avoid conflicts on the shared test database. Each test cleans the database and Redis before it runs, so tests are fully independent of each other.
+
+---
+
 ## Stopping the dev environment
 
 Stop the Node servers: `Ctrl+C` in the terminal running `npm run dev`
