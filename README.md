@@ -18,6 +18,7 @@ A real-time, multi-tenant DJ set song identification platform. Each Organizer (D
 - 🚪 **Single and multi-room events** — organizers choose at creation time: single-room events drop attendees directly into the room; multi-room events show inline room buttons so attendees pick their room without a separate page
 - ✏️ **Room management** — organizers can rename rooms and add new rooms to an existing event from the organizer dashboard
 - 🔁 **Recurring events** — organizers can mark an event as repeating (weekly, biweekly, or monthly); a "Schedule next" button auto-fills the next occurrence date, name, venue, and room names into the create form
+- 👥 **Organizer teams** — organizers can add teammates by email; teammates can manage all events and rooms on the organizer's behalf, but only the organizer can manage team membership
 
 ---
 
@@ -176,8 +177,11 @@ All routes are prefixed with `/api`.
 | `GET` | `/users/lookup?email=...` | Admin | Find a USER-role account by email |
 | `PATCH` | `/users/:id/promote` | Admin | Promote a user to Organizer and assign their slug |
 | `GET` | `/organizers` | — | List all organizers with active event counts |
-| `GET` | `/organizers/:slug` | — | Organizer profile + events + rooms |
+| `GET` | `/organizers/:slug` | — | Organizer profile + events + rooms + `viewerIsTeamMember` flag |
 | `PATCH` | `/organizers/:id` | Admin | Edit organizer name or slug |
+| `GET` | `/organizers/me/team` | Organizer | List teammates |
+| `POST` | `/organizers/me/team` | Organizer | Add a teammate by email |
+| `DELETE` | `/organizers/me/team/:userId` | Organizer | Remove a teammate |
 | `POST` | `/events` | Organizer | Create an event |
 | `PATCH` | `/events/:id/startTime` | Organizer/Admin | Update event start time |
 | `PATCH` | `/events/:id/venue` | Organizer/Admin | Assign or clear the event venue |
@@ -201,6 +205,31 @@ All routes are prefixed with `/api`.
 | `PATCH` | `/venues/:id/restore` | Creator/Admin | Restore a soft-deleted venue |
 | `GET` | `/spotify/search?q=...` | Operator/DJ | Search Spotify for tracks |
 | `POST` | `/songs/:id/react` | — | Submit or change an emoji reaction (15-min window, rate-limited) |
+
+---
+
+## Running tests
+
+The backend has an integration test suite (Vitest + Supertest) that runs against a dedicated test database. Tests cover auth, event/room management, reactions, and organizer team management.
+
+### One-time setup
+
+Create the test database and apply migrations:
+
+```bash
+docker exec vibe-check-postgres-1 createdb -U postgres vibecheck_test
+cd backend
+DATABASE_URL=postgresql://postgres:password@localhost:5432/vibecheck_test npx prisma migrate deploy
+```
+
+### Running tests
+
+```bash
+npm test --prefix backend          # run all tests once
+npm run test:watch --prefix backend  # re-run on file save (while writing tests)
+```
+
+Tests run sequentially (not in parallel) to avoid conflicts on the shared test database. Each test cleans the database and Redis before it runs, so tests are fully independent of each other.
 
 ---
 

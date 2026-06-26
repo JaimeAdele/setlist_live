@@ -31,11 +31,19 @@ interface Event {
   recurrenceDayPosition: number | null;
 }
 
+interface Teammate {
+  id: string;
+  name: string | null;
+  email: string;
+  addedAt: string;
+}
+
 interface Organizer {
   id: string;
   name: string;
   slug: string;
   events: Event[];
+  viewerIsTeamMember: boolean;
 }
 
 function getDayPosition(date: Date): number {
@@ -165,6 +173,13 @@ export default function OperatorPage() {
   const [addRoomRenameTo, setAddRoomRenameTo] = useState('');
   const [addingRoom, setAddingRoom] = useState(false);
 
+  // Team management
+  const [team, setTeam] = useState<Teammate[]>([]);
+  const [addTeammateEmail, setAddTeammateEmail] = useState('');
+  const [addingTeammate, setAddingTeammate] = useState(false);
+  const [teammateError, setTeammateError] = useState<string | null>(null);
+  const [removingTeammateId, setRemovingTeammateId] = useState<string | null>(null);
+
   // Status dropdown (one room at a time)
   const [statusDropdown, setStatusDropdown] = useState<string | null>(null);
 
@@ -179,7 +194,7 @@ export default function OperatorPage() {
   }, [slug]);
 
   const isPagePrivileged = organizer !== null && (
-    user?.userId === organizer.id || user?.role === 'ADMIN'
+    user?.userId === organizer.id || user?.role === 'ADMIN' || organizer.viewerIsTeamMember
   );
   const isOwner = organizer !== null && user?.userId === organizer.id;
 
@@ -190,6 +205,14 @@ export default function OperatorPage() {
         .then(data => setVenues(data.venues ?? []));
     }
   }, [isPagePrivileged]);
+
+  useEffect(() => {
+    if (isOwner) {
+      fetch('/api/organizers/me/team', { credentials: 'include' })
+        .then(r => r.json())
+        .then(data => setTeam(data.team ?? []));
+    }
+  }, [isOwner]);
 
   // Close venue combobox dropdown on click outside
   useEffect(() => {
@@ -425,6 +448,45 @@ export default function OperatorPage() {
           ),
         };
       });
+    }
+  }
+
+  // ── Team management ───────────────────────────────────────────────────────
+
+  async function handleAddTeammate(e: React.FormEvent) {
+    e.preventDefault();
+    setAddingTeammate(true);
+    setTeammateError(null);
+    try {
+      const res = await fetch('/api/organizers/me/team', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: addTeammateEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTeammateError(data.error ?? 'Failed to add teammate');
+        return;
+      }
+      setTeam(prev => [...prev, data]);
+      setAddTeammateEmail('');
+    } finally {
+      setAddingTeammate(false);
+    }
+  }
+
+  async function handleRemoveTeammate(teammateId: string) {
+    if (!window.confirm('Remove this teammate from your team?')) return;
+    setRemovingTeammateId(teammateId);
+    try {
+      const res = await fetch(`/api/organizers/me/team/${teammateId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) setTeam(prev => prev.filter(t => t.id !== teammateId));
+    } finally {
+      setRemovingTeammateId(null);
     }
   }
 
@@ -831,6 +893,61 @@ export default function OperatorPage() {
             )}
           </div>
         )}
+        {isOwner && (
+          <div className='mt-12'>
+            <h2 className='text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4'>Your team</h2>
+            <div className='bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col gap-4'>
+
+              <form onSubmit={handleAddTeammate} className='flex gap-2'>
+                <input
+                  type='email'
+                  value={addTeammateEmail}
+                  onChange={e => { setAddTeammateEmail(e.target.value); setTeammateError(null); }}
+                  placeholder='Add teammate by email…'
+                  className={inputClass}
+                />
+                <button
+                  type='submit'
+                  disabled={!addTeammateEmail.trim() || addingTeammate}
+                  className='shrink-0 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-4 py-2.5 rounded-xl transition-colors text-sm cursor-pointer'
+                >
+                  {addingTeammate ? 'Adding…' : 'Add'}
+                </button>
+              </form>
+
+              {teammateError && (
+                <p className='text-red-400 text-xs -mt-1'>{teammateError}</p>
+              )}
+
+              {team.length === 0 ? (
+                <p className='text-gray-600 text-sm'>No teammates yet.</p>
+              ) : (
+                <ul className='flex flex-col gap-2'>
+                  {team.map(t => (
+                    <li key={t.id} className='flex items-center justify-between gap-3'>
+                      <div className='min-w-0'>
+                        {t.name && <p className='text-white text-sm truncate'>{t.name}</p>}
+                        <p className='text-gray-500 text-xs truncate'>{t.email}</p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveTeammate(t.id)}
+                        disabled={removingTeammateId === t.id}
+                        className='shrink-0 p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-40 transition-colors cursor-pointer'
+                        aria-label='Remove teammate'
+                      >
+                        <svg width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+                          <line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/>
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+            </div>
+          </div>
+        )}
+
       </Layout>
 
       {/* Venue creation modal */}
