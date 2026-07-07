@@ -19,6 +19,7 @@ A real-time, multi-tenant DJ set song identification platform. Each Organizer (D
 - ✏️ **Room management** — organizers can rename rooms and add new rooms to an existing event from the organizer dashboard
 - 🔁 **Recurring events** — organizers can mark an event as repeating (weekly, biweekly, or monthly); a "Schedule next" button auto-fills the next occurrence date, name, venue, and room names into the create form
 - 👥 **Organizer teams** — organizers can add teammates by email; teammates can manage all events and rooms on the organizer's behalf, but only the organizer can manage team membership
+- 📲 **Installable PWA** — add to home screen on any device; service worker precaches the app shell so it loads offline; install prompt appears automatically in supported browsers
 
 ---
 
@@ -26,7 +27,7 @@ A real-time, multi-tenant DJ set song identification platform. Each Organizer (D
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19 + TypeScript, Vite, Tailwind CSS v4, React Router v7 |
+| Frontend | React 19 + TypeScript, Vite 8, Tailwind CSS v4, React Router v7, Workbox (PWA) |
 | Backend | Node.js + Express + TypeScript |
 | Database | PostgreSQL 16 (via Docker) |
 | ORM | Prisma |
