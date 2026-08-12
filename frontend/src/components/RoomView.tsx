@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRoomSocket } from '../hooks/useRoomSocket';
+import { useAutoIdentify, type AutoStatus } from '../hooks/useAutoIdentify';
 import IdentifyButton from './IdentifyButton';
 import EmojiReaction from './EmojiReaction';
 
@@ -93,6 +94,16 @@ function RoomView({ room, event, initialSongs, isPrivileged, slug }: Props) {
   const [venueOptions, setVenueOptions] = useState<VenueSummary[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState(event.venue?.id ?? '');
   const [savingVenue, setSavingVenue] = useState(false);
+
+  const [autoStatus, setAutoStatus] = useState<AutoStatus>('idle');
+  const [autoDetectEnabled, setAutoDetectEnabled] = useState(false);
+
+  useAutoIdentify({
+    roomCode: room.roomCode,
+    eventActive: status === 'ACTIVE',
+    enabled: isPrivileged && autoDetectEnabled,
+    onStatusChange: setAutoStatus,
+  });
 
   const { isIdentifying } = useRoomSocket(room.roomCode, (song) => {
     setSongs((prev) => [{ ...song, breakdown: EMPTY_BREAKDOWN }, ...prev]);
@@ -372,6 +383,42 @@ function RoomView({ room, event, initialSongs, isPrivileged, slug }: Props) {
             )}
           </div>
         </div>
+
+        {/* Auto-detect status + toggle (privileged users only) */}
+        {isPrivileged && status === 'ACTIVE' && (
+          <div className={`rounded-xl border px-4 py-3 mb-3 flex items-center justify-between transition-colors ${
+            autoDetectEnabled ? 'border-accent/30 bg-gray-900' : 'border-gray-700 bg-gray-900'
+          }`}>
+            <div className='flex items-center gap-2'>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${
+                !autoDetectEnabled
+                  ? 'bg-gray-600'
+                  : autoStatus === 'listening' || autoStatus === 'processing'
+                  ? 'bg-accent animate-pulse'
+                  : autoStatus === 'match'
+                  ? 'bg-green-400'
+                  : autoStatus === 'no_match' || autoStatus === 'error'
+                  ? 'bg-gray-500'
+                  : 'bg-accent'
+              }`} />
+              <span className='text-sm text-gray-300'>
+                {!autoDetectEnabled && 'Auto-detect off'}
+                {autoDetectEnabled && autoStatus === 'listening' && 'Listening...'}
+                {autoDetectEnabled && autoStatus === 'processing' && 'Identifying...'}
+                {autoDetectEnabled && autoStatus === 'match' && 'Song detected'}
+                {autoDetectEnabled && autoStatus === 'no_match' && 'No match'}
+                {autoDetectEnabled && autoStatus === 'error' && 'Auto-detect error'}
+                {autoDetectEnabled && autoStatus === 'idle' && 'Auto-detecting'}
+              </span>
+            </div>
+            <button
+              onClick={() => setAutoDetectEnabled((v) => !v)}
+              className='text-xs font-medium px-3 py-1 rounded-lg border border-gray-600 hover:border-gray-400 text-gray-400 hover:text-white transition-colors cursor-pointer shrink-0'
+            >
+              {autoDetectEnabled ? 'Pause' : 'Start'}
+            </button>
+          </div>
+        )}
 
         {/* Identify button */}
         <IdentifyButton
