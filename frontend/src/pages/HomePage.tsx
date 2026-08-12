@@ -33,7 +33,7 @@ export default function HomePage() {
         type='text'
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder='Search organizers…'
+        placeholder='Search groups…'
         className='w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-accent transition-colors text-base sm:text-sm mb-6'
       />
 

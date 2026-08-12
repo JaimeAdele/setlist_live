@@ -27,3 +27,6 @@ screenshots/
 
 # One-off scripts with hardcoded credentials
 backend/scripts/
+
+# Local planning docs — not part of the codebase
+plans/
